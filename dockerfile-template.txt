@@ -1,0 +1,8 @@
+# Use n8n image from Docker Hub
+FROM n8nio/n8n:latest
+
+# Expose port (change if needed)
+EXPOSE 5678
+
+# Entrypoint to start n8n
+ENTRYPOINT ["tini", "--", "node", "packages/cli", "start"]
