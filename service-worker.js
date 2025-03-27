@@ -37,6 +37,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fall back to network
 self.addEventListener('fetch', (event) => {
+  // Skip caching for unsupported schemes
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -50,10 +55,17 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
+            // Clone the response
             const responseToCache = response.clone();
+
+            // Add to cache
             caches.open(CACHE_NAME)
               .then((cache) => {
-                cache.put(event.request, responseToCache);
+                try {
+                  cache.put(event.request, responseToCache);
+                } catch (error) {
+                  console.error('Cache put error:', error);
+                }
               });
 
             return response;
