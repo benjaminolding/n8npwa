@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA for Railway Setup</title>
+</head>
+<body>
+  <h1>Connect to Railway and Deploy n8n Server</h1>
+  
+  <div id="status">
+    <p>Not connected to Railway.</p>
+  </div>
+  
+  <button id="connectRailway">Connect to Railway</button>
+  <a href="https://railway.app/signup" target="_blank">No Railway account? Sign up for free.</a>
+
+  <div id="deployButtonContainer">
+    <button id="deployN8n" style="display:none;">Deploy n8n Server</button>
+  </div>
+
+  <script>
+    const connectButton = document.getElementById('connectRailway');
+    const status = document.getElementById('status');
+    const deployButtonContainer = document.getElementById('deployButtonContainer');
+    const deployButton = document.getElementById('deployN8n');
+
+    // Check if the app is connected
+    let connected = false; // This will depend on whether the API key is saved
+
+    // Simulate the connection check (replace with actual IndexedDB check)
+    if (connected) {
+      status.innerHTML = 'Connected to Railway!';
+      deployButtonContainer.style.display = 'block'; // Show the deploy button
+    }
+
+    // Event handler to connect to Railway and download the script
+    connectButton.addEventListener('click', () => {
+      // Create and download the Railway CLI setup script
+      const scriptContent = `#!/bin/bash
+      # Railway CLI install and setup
+      if ! command -v railway &> /dev/null; then
+          echo "Railway CLI not found, installing..."
+          curl -sSL https://railway.app/cli | bash
+      fi
+      railway login
+      railway init
+      railway up --env production
+      `;
+
+      const blob = new Blob([scriptContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'railway-setup.sh';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      // Update status
+      status.innerHTML = 'Script downloaded. Run the script to set up Railway.';
+    });
+
+    // Event handler to deploy the n8n server after connection
+    deployButton.addEventListener('click', () => {
+      // Logic to deploy the n8n server using Railway CLI
+      alert('Deploying n8n Server...');
+      // Here you can integrate logic to deploy via Railway CLI in the script
+    });
+  </script>
+</body>
+</html>
