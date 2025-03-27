@@ -64,109 +64,40 @@ const generateQRCode = async (data) => {
 };
 
 // Generate and download deployment script
-const generateScript = () => {
-  const os = navigator.platform.toLowerCase();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const logFileName = `railway-deploy-${timestamp}.log`;
-
-  let scriptContent = '';
-  let fileName = '';
-
-  if (os.includes('win')) {
-    // Windows PowerShell script
-    scriptContent = `
-# Railway n8n Deployment Script
-$ErrorActionPreference = "Stop"
-$logFile = "${logFileName}"
-
-# Start logging
-Start-Transcript -Path $logFile -Append
-
-try {
-    Write-Host "Checking Railway CLI installation..."
+const generateScript = async () => {
+  try {
+    // Use more reliable OS detection
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isWindows = userAgent.includes('windows');
     
-    # Check if Railway CLI is installed
-    if (-not (Get-Command "railway" -ErrorAction SilentlyContinue)) {
-        Write-Host "Railway CLI not found, installing..."
-        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/railwayapp/cli/master/install.ps1" -OutFile "railway-install.ps1"
-        .\railway-install.ps1
-        Remove-Item "railway-install.ps1"
+    let scriptPath = isWindows ? 'railway-setup.ps1' : 'railway-setup.sh';
+    
+    // Add base URL for GitHub Pages deployment
+    const baseUrl = window.location.href.replace(/\/[^/]*$/, '/');
+    const fullScriptPath = new URL(scriptPath, baseUrl).href;
+    
+    // Fetch the appropriate script file
+    const response = await fetch(fullScriptPath);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch script: ${response.statusText}`);
     }
-
-    # Login to Railway
-    Write-Host "Logging in to Railway..."
-    railway login
-
-    # Initialize new project
-    Write-Host "Creating new Railway project..."
-    railway init
-
-    # Deploy n8n
-    Write-Host "Deploying n8n..."
-    railway up --service n8n --env production
-
-    # Get deployment URL
-    $deployUrl = railway domain
-    Write-Host "Deployment URL: $deployUrl"
     
-    Write-Host "Deployment completed successfully!"
+    const scriptContent = await response.text();
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = scriptPath;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-} catch {
-    Write-Host "Error: $_"
-    exit 1
-} finally {
-    Stop-Transcript
-}
-`;
-    fileName = 'railway-setup.ps1';
-  } else {
-    // Unix bash script
-    scriptContent = `
-#!/bin/bash
-# Railway n8n Deployment Script
-set -e
-
-# Set up logging
-exec 1> >(tee "${logFileName}") 2>&1
-
-echo "Checking Railway CLI installation..."
-
-# Check if Railway CLI is installed
-if ! command -v railway &> /dev/null; then
-    echo "Railway CLI not found, installing..."
-    curl -fsSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
-fi
-
-# Login to Railway
-echo "Logging in to Railway..."
-railway login
-
-# Initialize new project
-echo "Creating new Railway project..."
-railway init
-
-# Deploy n8n
-echo "Deploying n8n..."
-railway up --service n8n --env production
-
-# Get deployment URL
-echo "Deployment URL:"
-railway domain
-
-echo "Deployment completed successfully!"
-`;
-    fileName = 'railway-setup.sh';
+    updateStatus('Script downloaded. Run it and upload the generated log file.');
+  } catch (error) {
+    console.error('Error downloading script:', error);
+    updateStatus('Failed to download script: ' + error.message, true);
   }
-
-  const blob = new Blob([scriptContent], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  updateStatus('Script downloaded. Run it and upload the generated log file.');
 };
 
 // Process deployment log file
