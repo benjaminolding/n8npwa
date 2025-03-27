@@ -1,18 +1,211 @@
+:root {
+  --primary-color: #000000;
+  --secondary-color: #333333;
+  --accent-color: #0066cc;
+  --background-color: #ffffff;
+  --error-color: #dc3545;
+  --success-color: #28a745;
+  --border-color: #dee2e6;
+  --container-bg: #f8f9fa;
+}
+
 body {
   font-family: Arial, sans-serif;
-  text-align: center;
+  margin: 0;
+  padding: 0;
+  background-color: var(--background-color);
+  color: var(--primary-color);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
   padding: 20px;
 }
 
-button {
-  padding: 10px 20px;
+h1 {
+  text-align: center;
+  color: var(--primary-color);
+  margin-bottom: 30px;
+  font-size: 2em;
+}
+
+h2 {
+  color: var(--secondary-color);
+  margin: 20px 0 10px;
+  font-size: 1.5em;
+}
+
+.status-container {
+  background-color: var(--container-bg);
+  padding: 15px;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.status-container p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.main-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.action-container {
+  background-color: var(--container-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 10px 0;
+}
+
+.action-container p {
+  color: var(--secondary-color);
+  margin: 10px 0;
+}
+
+.primary-button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
   font-size: 16px;
+  border-radius: 6px;
   cursor: pointer;
-  margin-top: 20px;
+  transition: background-color 0.3s, transform 0.1s;
+  width: 100%;
+  max-width: 300px;
+  margin: 10px auto;
+  display: block;
+}
+
+.primary-button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+}
+
+.secondary-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 100%;
+  max-width: 200px;
+  margin: 10px auto;
+  display: block;
+}
+
+.secondary-button:hover {
+  background-color: #5a6268;
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 15px auto;
+  padding: 10px;
+  border: 2px dashed var(--border-color);
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.file-input:hover {
+  border-color: var(--accent-color);
+}
+
+.qr-container {
+  text-align: center;
+  margin: 30px 0;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #qrCodeCanvas {
-  margin-top: 20px;
+  margin: 20px auto;
   max-width: 200px;
   max-height: 200px;
+  display: block;
+}
+
+/* Loading state for buttons */
+.primary-button.loading,
+.secondary-button.loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Error state for inputs */
+.file-input.error {
+  border-color: var(--error-color);
+}
+
+/* Success state for status */
+.status-container.success p {
+  color: var(--success-color);
+}
+
+/* Error state for status */
+.status-container.error p {
+  color: var(--error-color);
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .container {
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 1.5em;
+  }
+
+  h2 {
+    font-size: 1.2em;
+  }
+
+  .action-container {
+    padding: 15px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .file-input {
+    max-width: 100%;
+  }
+}
+
+/* Print styles */
+@media print {
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .file-input {
+    display: none;
+  }
 }

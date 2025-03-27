@@ -4,30 +4,84 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#000000">
-  <link rel="icon" href="/favicon.ico">
-  <title>PWA for Railway Setup</title>
+  <meta name="description" content="Deploy n8n server to Railway with ease">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Railway n8n">
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="AppImages/windows11/Square150x150Logo.scale-200.png">
+  
+  <link rel="icon" href="AppImages/android/android-launchericon-192-192.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- iOS icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="AppImages/ios/180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="AppImages/ios/152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="AppImages/ios/167.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="AppImages/ios/120.png">
+  <link rel="apple-touch-icon" sizes="87x87" href="AppImages/ios/87.png">
+  <link rel="apple-touch-icon" sizes="80x80" href="AppImages/ios/80.png">
+  <link rel="apple-touch-icon" sizes="58x58" href="AppImages/ios/58.png">
+  
+  <!-- Windows icons -->
+  <meta name="msapplication-square70x70logo" content="AppImages/windows11/SmallTile.scale-100.png">
+  <meta name="msapplication-square150x150logo" content="AppImages/windows11/Square150x150Logo.scale-100.png">
+  <meta name="msapplication-wide310x150logo" content="AppImages/windows11/Wide310x150Logo.scale-100.png">
+  <title>Railway n8n Deployment</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Connect to Railway and Deploy n8n Server</h1>
+  <div class="container">
+    <h1>Deploy n8n Server to Railway</h1>
 
-  <div id="status">
-    <p>Not connected to Railway.</p>
-  </div>
+    <div id="status" class="status-container">
+      <p>Ready to start deployment</p>
+    </div>
 
-  <button id="connectRailway">Connect to Railway</button>
-  <a href="https://railway.app/signup" target="_blank">No Railway account? Sign up for free.</a>
+    <div class="main-actions">
+      <div class="action-container">
+        <h2>Step 1: Download Deployment Script</h2>
+        <p>Get the script for your operating system</p>
+        <button id="downloadScript" class="primary-button">Download Script</button>
+      </div>
 
-  <div id="deployButtonContainer" style="display:none;">
-    <button id="deployN8n">Deploy n8n Server</button>
-  </div>
+      <div class="action-container">
+        <h2>Step 2: Upload Deployment Log</h2>
+        <p>After running the script, upload the generated log file</p>
+        <input type="file" id="logFile" accept=".log" class="file-input">
+        <button id="processLog" class="primary-button">Process Log File</button>
+      </div>
 
-  <div id="qrCodeContainer" style="display:none;">
-    <p>Scan this QR code on another device to share credentials:</p>
-    <canvas id="qrCodeCanvas"></canvas>
+      <div id="workflowUpload" class="action-container" style="display:none;">
+        <h2>Upload n8n Workflow</h2>
+        <p>Deploy custom workflows to your n8n server</p>
+        <input type="file" id="workflowFile" accept=".json" class="file-input">
+        <button id="uploadWorkflow" class="secondary-button">Upload Workflow</button>
+      </div>
+
+      <div id="qrCodeContainer" class="qr-container" style="display:none;">
+        <h2>Cross-device Sync</h2>
+        <p>Scan this QR code on another device to share credentials:</p>
+        <canvas id="qrCodeCanvas"></canvas>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful');
+          })
+          .catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
