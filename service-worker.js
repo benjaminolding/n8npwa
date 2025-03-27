@@ -37,8 +37,9 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fall back to network
 self.addEventListener('fetch', (event) => {
-  // Skip caching for unsupported schemes
+  // For non-HTTP(S) requests, just fetch without caching
   if (!event.request.url.startsWith('http')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -48,6 +49,7 @@ self.addEventListener('fetch', (event) => {
         if (response) {
           return response;
         }
+        
         return fetch(event.request)
           .then((response) => {
             // Check if we received a valid response
@@ -55,20 +57,27 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
-            // Clone the response
-            const responseToCache = response.clone();
+            // Only cache HTTP(S) responses
+            if (response.url.startsWith('http')) {
+              // Clone the response
+              const responseToCache = response.clone();
 
-            // Add to cache
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                try {
-                  cache.put(event.request, responseToCache);
-                } catch (error) {
-                  console.error('Cache put error:', error);
-                }
-              });
+              // Add to cache
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  try {
+                    cache.put(event.request, responseToCache);
+                  } catch (error) {
+                    console.error('Cache put error:', error);
+                  }
+                });
+            }
 
             return response;
+          })
+          .catch((error) => {
+            console.error('Fetch error:', error);
+            throw error;
           });
       })
   );
