@@ -13,6 +13,6 @@ railway login
 echo "Initializing Railway project..."
 railway init
 
-# Deploy the n8n server
+# Deploy the n8n server (if not already deployed)
 echo "Deploying n8n server..."
 railway up --env production
