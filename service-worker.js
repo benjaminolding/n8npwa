@@ -37,10 +37,9 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fall back to network
 self.addEventListener('fetch', (event) => {
-  // For non-HTTP(S) requests, just fetch without caching
+  // Only handle HTTP(S) requests
   if (!event.request.url.startsWith('http')) {
-    event.respondWith(fetch(event.request));
-    return;
+    return; // Let the browser handle non-HTTP requests normally
   }
 
   event.respondWith(
@@ -49,36 +48,35 @@ self.addEventListener('fetch', (event) => {
         if (response) {
           return response;
         }
-        
-        return fetch(event.request)
+
+        return fetch(event.request.clone())
           .then((response) => {
             // Check if we received a valid response
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
-            // Only cache HTTP(S) responses
-            if (response.url.startsWith('http')) {
-              // Clone the response
-              const responseToCache = response.clone();
+            // Clone the response before caching
+            const responseToCache = response.clone();
 
-              // Add to cache
-              caches.open(CACHE_NAME)
-                .then((cache) => {
-                  try {
-                    cache.put(event.request, responseToCache);
-                  } catch (error) {
-                    console.error('Cache put error:', error);
-                  }
-                });
-            }
+            // Add to cache in the background
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache)
+                  .catch(error => console.error('Cache put error:', error));
+              })
+              .catch(error => console.error('Cache open error:', error));
 
             return response;
           })
-          .catch((error) => {
+          .catch(error => {
             console.error('Fetch error:', error);
             throw error;
           });
+      })
+      .catch(error => {
+        console.error('Cache match error:', error);
+        return fetch(event.request);
       })
   );
 });
