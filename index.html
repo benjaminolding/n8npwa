@@ -43,6 +43,21 @@
       <div class="action-container">
         <h2>Step 1: Download Deployment Script</h2>
         <p>Get the script for your operating system</p>
+        <div class="instructions">
+          <p><strong>Windows Instructions:</strong></p>
+          <ol>
+            <li>Download the script using the button below</li>
+            <li>Right-click the downloaded .ps1 file and select "Run with PowerShell"</li>
+            <li>If blocked, you may need to run: <code>Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process</code> in PowerShell first</li>
+          </ol>
+          <p><strong>Mac/Linux Instructions:</strong></p>
+          <ol>
+            <li>Download the script using the button below</li>
+            <li>Open Terminal in the download directory</li>
+            <li>Run: <code>chmod +x railway-setup.sh</code> to make it executable</li>
+            <li>Run: <code>./railway-setup.sh</code></li>
+          </ol>
+        </div>
         <button id="downloadScript" class="primary-button">Download Script</button>
       </div>
 
