@@ -1,122 +1,63 @@
-const CACHE_NAME = 'railway-n8n-pwa-v1';
-const ASSETS_TO_CACHE = [
+// Cache name
+const CACHE_NAME = 'railway-n8n-cache-v1';
+
+// Files to cache
+const urlsToCache = [
   './',
   './index.html',
-  './app.js',
   './style.css',
+  './app.js',
+  './db.js',
+  './ui.js',
+  './workflow.js',
+  './instructions.js',
   './manifest.json',
-  './AppImages/android/android-launchericon-192-192.png',
-  './AppImages/android/android-launchericon-512-512.png',
+  './railway-setup.ps1',
+  './railway-setup.sh',
+  './railway-setup.bat',
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
   'https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js'
 ];
 
-// Install event - cache assets
-self.addEventListener('install', (event) => {
+// Install event
+self.addEventListener('install', event => {
+  // Skip waiting to make new service worker active immediately
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(ASSETS_TO_CACHE);
+      .then(cache => {
+        console.log('Opened cache');
+        // Attempt to cache files but don't fail if some aren't available
+        return cache.addAll(urlsToCache).catch(err => console.log('Cache error:', err));
       })
   );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
+// Activate event
+self.addEventListener('activate', event => {
+  // Claim control over all clients immediately
+  event.waitUntil(clients.claim());
 });
 
-// Helper function to check if a request should be handled by our service worker
-const shouldHandleRequest = (request) => {
-  // Only handle GET requests
-  if (request.method !== 'GET') return false;
-
-  const url = new URL(request.url);
-
-  // Only handle HTTP(S) requests
-  if (!url.protocol.startsWith('http')) return false;
-
-  // Only handle requests within our app's scope
-  const scope = self.registration.scope;
-  if (!url.href.startsWith(scope) && !ASSETS_TO_CACHE.includes(url.href)) {
-    return false;
+// Fetch event - allow all requests during development
+self.addEventListener('fetch', event => {
+  // Don't intercept websocket connections
+  if (event.request.url.startsWith('ws:') || event.request.url.startsWith('wss:')) {
+    return;
   }
 
-  return true;
-};
-
-// Fetch event - serve from cache, fall back to network
-self.addEventListener('fetch', (event) => {
-  // Skip handling if request doesn't meet our criteria
-  if (!shouldHandleRequest(event.request)) {
-    return; // Let the browser handle it normally
+  // Don't intercept IndexedDB or other local storage requests
+  if (event.request.url.includes('idb') || 
+      event.request.url.includes('indexeddb')) {
+    return;
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response;
-        }
-
-        // Clone the request for the fetch call
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest)
-          .then((response) => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response for caching
-            const responseToCache = response.clone();
-
-            // Add to cache in the background
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                try {
-                  cache.put(event.request, responseToCache);
-                } catch (error) {
-                  console.warn('Cache put failed:', error);
-                }
-              })
-              .catch(error => {
-                console.warn('Cache open failed:', error);
-              });
-
-            return response;
-          })
-          .catch(error => {
-            console.warn('Fetch failed:', error);
-            throw error;
-          });
+    fetch(event.request)
+      .catch(() => {
+        return caches.match(event.request);
       })
-      .catch(error => {
-        console.warn('Cache match failed:', error);
-        return fetch(event.request);
-      })
-  );
-});
-
-// Push notification event
-self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data.text(),
-    icon: './AppImages/android/android-launchericon-192-192.png',
-    badge: './AppImages/android/android-launchericon-192-192.png'
-  };
-
-  event.waitUntil(
-    self.registration.showNotification('Railway n8n Setup', options)
   );
 });

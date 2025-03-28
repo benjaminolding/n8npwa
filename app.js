@@ -1,208 +1,245 @@
-// IndexedDB setup
-const DB_NAME = 'RailwayN8nDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'credentials';
-
-let db;
-
-const initDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      db = request.result;
-      resolve(db);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
-    };
-  });
-};
-
 // UI Elements
-const statusElement = document.getElementById('status').querySelector('p');
-const downloadScriptButton = document.getElementById('downloadScript');
-const logFileInput = document.getElementById('logFile');
-const processLogButton = document.getElementById('processLog');
-const workflowUpload = document.getElementById('workflowUpload');
-const workflowFile = document.getElementById('workflowFile');
-const uploadWorkflowButton = document.getElementById('uploadWorkflow');
-const qrContainer = document.getElementById('qrCodeContainer');
-const qrCanvas = document.getElementById('qrCodeCanvas');
-
-// Helper Functions
-const updateStatus = (message, isError = false) => {
-  statusElement.textContent = message;
-  statusElement.style.color = isError ? 'var(--error-color)' : 'var(--success-color)';
+const elements = {
+  status: document.getElementById('status').querySelector('p'),
+  setupView: document.getElementById('setupView'),
+  n8nConfigView: document.getElementById('n8nConfigView'),
+  savedConfigView: document.getElementById('savedConfigView'),
+  proceedToN8n: document.getElementById('proceedToN8n'),
+  n8nConfigForm: document.getElementById('n8nConfigForm'),
+  n8nUrl: document.getElementById('n8nUrl'),
+  n8nPort: document.getElementById('n8nPort'),
+  n8nPassword: document.getElementById('n8nPassword'),
+  n8nApiKey: document.getElementById('n8nApiKey'),
+  saveN8nConfig: document.getElementById('saveN8nConfig'),
+  savedConfig: document.getElementById('savedConfig'),
+  editConfig: document.getElementById('editConfig'),
+  testConnection: document.getElementById('testConnection')
 };
 
-const saveCredentials = async (credentials) => {
-  const transaction = db.transaction([STORE_NAME], 'readwrite');
-  const store = transaction.objectStore(STORE_NAME);
-  await store.put({ id: 'railway', ...credentials });
-};
+// View Management
+function showView(viewName) {
+  elements.setupView.style.display = 'none';
+  elements.n8nConfigView.style.display = 'none';
+  elements.savedConfigView.style.display = 'none';
 
-const getCredentials = async () => {
-  const transaction = db.transaction([STORE_NAME], 'readonly');
-  const store = transaction.objectStore(STORE_NAME);
-  return store.get('railway');
-};
-
-const generateQRCode = async (data) => {
-  try {
-    await QRCode.toCanvas(qrCanvas, JSON.stringify(data));
-    qrContainer.style.display = 'block';
-  } catch (error) {
-    console.error('Error generating QR code:', error);
-    updateStatus('Failed to generate QR code', true);
+  switch (viewName) {
+    case 'setup':
+      elements.setupView.style.display = 'block';
+      break;
+    case 'n8nConfig':
+      elements.n8nConfigView.style.display = 'block';
+      break;
+    case 'savedConfig':
+      elements.savedConfigView.style.display = 'block';
+      break;
   }
-};
+}
 
-// Generate and download deployment script
-const generateScript = async () => {
-  try {
-    // Use more reliable OS detection
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isWindows = userAgent.includes('windows');
-    
-    let scriptPath = isWindows ? 'railway-setup.ps1' : 'railway-setup.sh';
-    
-    // Add base URL for GitHub Pages deployment
-    const baseUrl = window.location.href.replace(/\/[^/]*$/, '/');
-    const fullScriptPath = new URL(scriptPath, baseUrl).href;
-    
-    // Fetch the appropriate script file
-    const response = await fetch(fullScriptPath);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch script: ${response.statusText}`);
-    }
-    
-    const scriptContent = await response.text();
-    const blob = new Blob([scriptContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = scriptPath;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+function updateStatus(message, isError = false) {
+  const statusElement = elements.status;
+  statusElement.innerHTML = message.replace(/\n/g, '<br>');
+  statusElement.parentElement.className = isError ? 'alert alert-danger mb-4' : 'alert alert-info mb-4';
+}
 
-    updateStatus('Script downloaded. Run it and upload the generated log file.');
-  } catch (error) {
-    console.error('Error downloading script:', error);
-    updateStatus('Failed to download script: ' + error.message, true);
-  }
-};
-
-// Process deployment log file
-const processLogFile = async () => {
-  const file = logFileInput.files[0];
-  if (!file) {
-    updateStatus('Please select a log file', true);
+function displaySavedConfig(config) {
+  if (!config) {
+    elements.savedConfig.innerHTML = '<p class="text-muted">No configuration saved</p>';
     return;
   }
 
-  try {
-    const content = await file.text();
-    
-    // Extract deployment URL
-    const urlMatch = content.match(/Deployment URL:?\s*(https?:\/\/[^\s]+)/i);
-    if (!urlMatch) {
-      throw new Error('Deployment URL not found in log file');
-    }
+  const maskedPassword = config.password ? '••••••••' : 'Not set';
+  const maskedApiKey = config.apiKey ? '••••••••' : 'Not set';
+  const displayUrl = config.port ? `${config.url}:${config.port}` : config.url;
 
-    const deploymentUrl = urlMatch[1];
-    
-    // Extract Railway project info
-    const projectMatch = content.match(/Project:\s*([^\s]+)/i);
-    const projectId = projectMatch ? projectMatch[1] : null;
+  elements.savedConfig.innerHTML = `
+    <div class="saved-config-details">
+      <div class="mb-3">
+        <strong>n8n URL:</strong><br>
+        <a href="${displayUrl}" target="_blank">${displayUrl}</a>
+      </div>
+      <div class="mb-3">
+        <strong>Owner Password:</strong><br>
+        ${maskedPassword}
+      </div>
+      <div class="mb-3">
+        <strong>API Key:</strong><br>
+        ${maskedApiKey}
+      </div>
+      <div class="text-muted">
+        Last Updated: ${new Date(config.timestamp).toLocaleString()}
+      </div>
+    </div>
+  `;
+}
 
-    const credentials = {
-      deploymentUrl,
-      projectId,
-      timestamp: new Date().toISOString()
-    };
+function getConfigFromForm() {
+  const port = elements.n8nPort.value.trim();
+  return {
+    url: elements.n8nUrl.value.trim(),
+    port: port ? parseInt(port) : null,
+    password: elements.n8nPassword.value.trim(),
+    apiKey: elements.n8nApiKey.value.trim()
+  };
+}
 
-    await saveCredentials(credentials);
-    await generateQRCode(credentials);
-    
-    workflowUpload.style.display = 'block';
-    updateStatus('Deployment credentials saved successfully!');
-    
-  } catch (error) {
-    console.error('Error processing log file:', error);
-    updateStatus('Failed to process log file: ' + error.message, true);
+// Function to construct the full URL with port if needed
+function getFullUrl(config) {
+  let baseUrl = config.url;
+  
+  // Remove trailing slashes
+  baseUrl = baseUrl.replace(/\/+$/, '');
+  
+  if (config.port) {
+    const url = new URL(baseUrl);
+    url.port = config.port.toString();
+    return url.toString();
   }
-};
+  return baseUrl;
+}
 
-// Upload workflow
-const uploadWorkflow = async () => {
-  const file = workflowFile.files[0];
-  if (!file) {
-    updateStatus('Please select a workflow file', true);
-    return;
-  }
-
+// Function to test n8n connection
+async function testN8nConnection(config) {
   try {
-    const credentials = await getCredentials();
-    if (!credentials) {
-      throw new Error('No deployment credentials found');
-    }
+    const fullUrl = getFullUrl(config);
+    const testUrl = `${fullUrl}/api/v1/workflows`;
 
-    const workflow = await file.text();
-    const workflowData = JSON.parse(workflow);
-
-    // Construct the n8n API endpoint
-    const apiUrl = `${credentials.deploymentUrl}/api/workflows`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
+    const response = await fetch(testUrl, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(workflowData)
+        'accept': 'application/json',
+        'X-N8N-API-KEY': config.apiKey
+      }
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to upload workflow: ${response.statusText}`);
+      console.error('API response not OK:', response.status, response.statusText);
+      return false;
     }
 
-    updateStatus('Workflow uploaded successfully!');
-    
+    const data = await response.json();
+    return true;
   } catch (error) {
-    console.error('Error uploading workflow:', error);
-    updateStatus('Failed to upload workflow: ' + error.message, true);
+    console.error('Connection test failed:', error);
+    return false;
   }
-};
+}
+
+// Function to update button state during testing
+function updateTestButton(loading = false) {
+  const button = elements.testConnection;
+  if (loading) {
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Testing...';
+  } else {
+    button.disabled = false;
+    button.innerHTML = 'Test Connection';
+  }
+}
+
+// Function to update save button state
+function updateSaveButton(loading = false) {
+  const button = elements.saveN8nConfig;
+  if (loading) {
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Testing connection...';
+  } else {
+    button.disabled = false;
+    button.innerHTML = 'Save Configuration';
+  }
+}
+
+// Event Listeners
+elements.proceedToN8n.addEventListener('click', () => {
+  showView('n8nConfig');
+  updateStatus('Enter your n8n configuration details.');
+});
+
+elements.testConnection.addEventListener('click', async () => {
+  const config = JSON.parse(localStorage.getItem('n8nConfig') || 'null');
+  if (!config || !config.url || !config.apiKey) {
+    updateStatus('Configuration not found. Please edit your configuration.', true);
+    return;
+  }
+
+  updateTestButton(true);
+  updateStatus('Testing connection to n8n...');
+
+  const connectionSuccess = await testN8nConnection(config);
+  updateTestButton(false);
+
+  if (connectionSuccess) {
+    updateStatus('✅ Connection successful! Your n8n instance is working properly.');
+  } else {
+    updateStatus('❌ Connection failed. Please check your n8n instance or edit your API key.', true);
+  }
+});
+
+elements.n8nConfigForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const config = getConfigFromForm();
+  
+  if (!config.url) {
+    updateStatus('n8n URL is required', true);
+    return;
+  }
+
+  try {
+    new URL(config.url);
+  } catch (error) {
+    updateStatus('Invalid n8n URL format', true);
+    return;
+  }
+
+  if (!config.apiKey) {
+    updateStatus('API Key is required', true);
+    return;
+  }
+
+  // Update UI to show testing state
+  updateSaveButton(true);
+  updateStatus('Testing connection to n8n...');
+
+  // Test the connection
+  const connectionSuccess = await testN8nConnection(config);
+
+  // Reset button state
+  updateSaveButton(false);
+
+  if (!connectionSuccess) {
+    updateStatus('Failed to connect to n8n. Please verify your URL and API Key.', true);
+    return;
+  }
+
+  // Save configuration if connection test passed
+  config.timestamp = Date.now();
+  localStorage.setItem('n8nConfig', JSON.stringify(config));
+  
+  showView('savedConfig');
+  displaySavedConfig(config);
+  updateStatus('✅ Connection successful! Configuration saved.');
+});
+
+elements.editConfig.addEventListener('click', () => {
+  const config = JSON.parse(localStorage.getItem('n8nConfig') || 'null');
+  showView('n8nConfig');
+  if (config) {
+    elements.n8nUrl.value = config.url || '';
+    elements.n8nPort.value = config.port || '';
+    elements.n8nPassword.value = config.password || '';
+    elements.n8nApiKey.value = config.apiKey || '';
+  }
+  updateStatus('Edit your n8n configuration.');
+});
 
 // Initialize app
-const initApp = async () => {
-  try {
-    await initDB();
-    
-    // Event listeners
-    downloadScriptButton.addEventListener('click', generateScript);
-    processLogButton.addEventListener('click', processLogFile);
-    uploadWorkflowButton.addEventListener('click', uploadWorkflow);
-
-    // Check for existing credentials
-    const credentials = await getCredentials();
-    if (credentials) {
-      workflowUpload.style.display = 'block';
-      await generateQRCode(credentials);
-      updateStatus('Ready to manage n8n deployment');
-    }
-  } catch (error) {
-    console.error('Initialization error:', error);
-    updateStatus('Failed to initialize application', true);
+document.addEventListener('DOMContentLoaded', () => {
+  const config = JSON.parse(localStorage.getItem('n8nConfig') || 'null');
+  if (config) {
+    showView('savedConfig');
+    displaySavedConfig(config);
+    updateStatus(`Managing n8n deployment at ${getFullUrl(config)}`);
+  } else {
+    showView('setup');
+    updateStatus('Follow the instructions to deploy your n8n server on Railway.');
   }
-};
-
-// Start the app
-initApp();
+});

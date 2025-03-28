@@ -29,75 +29,131 @@
   <meta name="msapplication-square150x150logo" content="AppImages/windows11/Square150x150Logo.scale-100.png">
   <meta name="msapplication-wide310x150logo" content="AppImages/windows11/Wide310x150Logo.scale-100.png">
   <title>Railway n8n Deployment</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Deploy n8n Server to Railway</h1>
+  <div class="container py-4">
+    <h1 class="text-center mb-4">Deploy n8n Server to Railway</h1>
 
-    <div id="status" class="status-container">
-      <p>Ready to start deployment</p>
+    <div id="status" class="alert alert-info mb-4">
+      <p class="mb-0">Ready to start deployment</p>
     </div>
 
-    <div class="main-actions">
-      <div class="action-container">
-        <h2>Step 1: Download Deployment Script</h2>
-        <p>Get the script for your operating system</p>
-        <div class="instructions">
-          <p><strong>Windows Instructions:</strong></p>
-          <ol>
-            <li>Download the script using the button below</li>
-            <li>Right-click the downloaded .ps1 file and select "Run with PowerShell"</li>
-            <li>If blocked, you may need to run: <code>Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process</code> in PowerShell first</li>
+    <!-- Initial Setup View -->
+    <div id="setupView" class="menu-view">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Railway Setup Instructions</h5>
+          <ol class="setup-steps">
+            <li>Visit <a href="https://railway.app" target="_blank">Railway.app</a> and sign in</li>
+            <li>Click "New Project" and select "Template"</li>
+            <li>Search for "n8n" in templates</li>
+            <li>Select the first n8n template that appears</li>
+            <li>Click "Deploy Now"</li>
+            <li>Wait for deployment to complete (2-3 minutes)</li>
+            <li>Click "View Deployment" to find your n8n URL at the top of the page</li>
           </ol>
-          <p><strong>Mac/Linux Instructions:</strong></p>
-          <ol>
-            <li>Download the script using the button below</li>
-            <li>Open Terminal in the download directory</li>
-            <li>Run: <code>chmod +x railway-setup.sh</code> to make it executable</li>
-            <li>Run: <code>./railway-setup.sh</code></li>
-          </ol>
+          <div class="mt-3">
+            <button class="btn btn-link p-0 mb-3 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#helpSection" aria-expanded="false" aria-controls="helpSection">
+              <span class="text-primary">➕ Need more detailed help?</span>
+            </button>
+            <div class="collapse" id="helpSection">
+              <div class="card card-body bg-light border-0">
+                <h6 class="mb-3">Detailed Steps:</h6>
+                <ol class="detailed-steps">
+                  <li>Create a Railway account or sign in with GitHub</li>
+                  <li>Once logged in, click the "New Project" button in the top-right</li>
+                  <li>In the template search box, type "n8n"</li>
+                  <li>Select the first n8n template that appears in the search results</li>
+                  <li>Click "Deploy Now" - Railway will automatically:
+                    <ul>
+                      <li>Set up a PostgreSQL database</li>
+                      <li>Configure environment variables</li>
+                      <li>Deploy your n8n instance</li>
+                    </ul>
+                  </li>
+                  <li>Once deployment is complete (usually 2-3 minutes), click "View Deployment"</li>
+                  <li>Your n8n URL will be shown at the top of the deployment page, it will look like: 
+                    <code>https://your-project-name.railway.app</code></li>
+                </ol>
+                <p class="mt-3 mb-0">
+                  <a href="https://lumberjack.so/p/install-n8n-on-railway-in-5-minutes" target="_blank" class="tutorial-link">
+                    📚 View Full Tutorial with Screenshots
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+          <button id="proceedToN8n" class="btn btn-primary mt-3">I've Deployed n8n</button>
         </div>
-        <button id="downloadScript" class="primary-button">Download Script</button>
       </div>
+    </div>
 
-      <div class="action-container">
-        <h2>Step 2: Upload Deployment Log</h2>
-        <p>After running the script, upload the generated log file</p>
-        <input type="file" id="logFile" accept=".log" class="file-input">
-        <button id="processLog" class="primary-button">Process Log File</button>
+    <!-- N8n Configuration View -->
+    <div id="n8nConfigView" class="menu-view" style="display:none;">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">n8n Configuration</h5>
+          <form id="n8nConfigForm" onsubmit="return false;">
+            <div class="mb-3">
+              <label for="n8nUrl" class="form-label">n8n URL</label>
+              <input type="url" class="form-control" id="n8nUrl" 
+                     placeholder="https://your-n8n-url.railway.app" 
+                     autocomplete="url" required>
+              <div class="form-text">For local instances, use: http://localhost:5678</div>
+              
+              <label for="n8nPort" class="form-label mt-2">Port (Optional)</label>
+              <input type="number" class="form-control" id="n8nPort" 
+                     placeholder="5678"
+                     min="1"
+                     max="65535">
+              <div class="form-text">Default port is 5678. Leave empty if using Railway deployment.</div>
+            </div>
+            <div class="mb-3">
+              <label for="n8nPassword" class="form-label">n8n Owner Password (Optional)</label>
+              <input type="password" class="form-control" id="n8nPassword" 
+                     placeholder="Enter your n8n owner password"
+                     autocomplete="new-password">
+            </div>
+            <div class="mb-3">
+              <label for="n8nApiKey" class="form-label">n8n API Key</label>
+              <input type="text" class="form-control" id="n8nApiKey" 
+                     placeholder="Enter your n8n API key"
+                     autocomplete="off"
+                     required>
+              <div class="form-text mt-2">
+                <strong>How to create an API key:</strong>
+                <ol class="mt-2 mb-0 ps-3">
+                  <li>Log in to your n8n instance</li>
+                  <li>Go to Settings > n8n API</li>
+                  <li>Click "Create an API key"</li>
+                  <li>Copy "My API Key"</li>
+                </ol>
+              </div>
+            </div>
+            <button type="submit" id="saveN8nConfig" class="btn btn-primary">Save Configuration</button>
+          </form>
+        </div>
       </div>
+    </div>
 
-      <div id="workflowUpload" class="action-container" style="display:none;">
-        <h2>Upload n8n Workflow</h2>
-        <p>Deploy custom workflows to your n8n server</p>
-        <input type="file" id="workflowFile" accept=".json" class="file-input">
-        <button id="uploadWorkflow" class="secondary-button">Upload Workflow</button>
-      </div>
-
-      <div id="qrCodeContainer" class="qr-container" style="display:none;">
-        <h2>Cross-device Sync</h2>
-        <p>Scan this QR code on another device to share credentials:</p>
-        <canvas id="qrCodeCanvas"></canvas>
+    <!-- Saved Configuration View -->
+    <div id="savedConfigView" class="menu-view" style="display:none;">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Your n8n Configuration</h5>
+          <div id="savedConfig"></div>
+          <div class="mt-3">
+            <button id="testConnection" class="btn btn-primary me-2">Test Connection</button>
+            <button id="editConfig" class="btn btn-secondary">Edit Configuration</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful');
-          })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
-    }
-  </script>
 </body>
 </html>
